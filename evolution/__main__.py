@@ -37,7 +37,7 @@ def train(args: argparse.Namespace) -> None:
         config = run_dir.load_config()
         config = replace(config, workers=workers, generations=args.generations or config.generations)
         run_dir.save_config(config)
-        run_dir.truncate_bests(resume.generation)
+        run_dir.truncate_to(resume.generation)
         print(f"resuming {run_dir.path} from generation {resume.generation} to {config.generations}")
     else:
         d = GAConfig()

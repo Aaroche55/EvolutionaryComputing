@@ -114,6 +114,7 @@ A run directory is updated after every generation:
 | `config.json` | the full configuration, enough to reproduce the run |
 | `history.csv` | best, worst, mean, median and std fitness per generation |
 | `best_per_generation.jsonl` | the best individual of every generation (fitness, game result, bitstring) |
+| `population_fitness.csv` | every individual of every generation, ranked: fitness, progress, time, cleared, death cause |
 | `best.json`, `best_actions.json` | the best so far; `best_actions.json` also plays with `python -m gallop replay` |
 | `checkpoint.npz` | the latest whole population and RNG state, used by `--resume` |
 

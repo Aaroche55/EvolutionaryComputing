@@ -284,12 +284,27 @@ def test_checkpoint_file_round_trip_and_resume(tmp_path):
     assert [b["generation"] for b in rd.bests()] == [0, 1, 2, 3, 4]
 
 
-def test_truncate_bests_drops_records_after_checkpoint(tmp_path):
+def test_population_fitness_recorded_for_every_individual(tmp_path):
+    rd = RunDir(tmp_path)
+    rd.start(small_config(6))
+    run = GeneticAlgorithm(small_config(6)).run(on_generation=rd.record)
+    rows = rd.population_fitness()
+    assert len(rows) == 4 * 10  # 4 generations x 10 individuals
+    for stats in run.history:
+        gen = [float(r["fitness"]) for r in rows if int(r["generation"]) == stats.generation]
+        assert gen == sorted(gen)
+        assert gen[0] == stats.best
+        assert gen[-1] == stats.worst
+        assert np.mean(gen) == pytest.approx(stats.mean)
+
+
+def test_truncate_drops_records_after_checkpoint(tmp_path):
     rd = RunDir(tmp_path)
     rd.start(small_config(1))
     GeneticAlgorithm(small_config(1)).run(on_generation=rd.record)
-    rd.truncate_bests(1)
+    rd.truncate_to(1)
     assert [b["generation"] for b in rd.bests()] == [0, 1]
+    assert {r["generation"] for r in rd.population_fitness()} == {"0", "1"}
 
 
 def test_cli_train_then_resume(tmp_path, capsys):
@@ -300,6 +315,7 @@ def test_cli_train_then_resume(tmp_path, capsys):
     assert "resuming" in capsys.readouterr().out
     rd = RunDir(out)
     assert [b["generation"] for b in rd.bests()] == [0, 1, 2, 3]
+    assert len(rd.population_fitness()) == 4 * 10
     assert rd.load_config().generations == 3
     straight = GeneticAlgorithm(replace(rd.load_config(), workers=1)).run()
     assert rd.load_checkpoint().history == straight.history

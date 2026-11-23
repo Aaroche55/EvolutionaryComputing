@@ -4,6 +4,7 @@ A run directory holds:
     config.json               the GAConfig (everything needed to reproduce the run)
     history.csv               per-generation statistics, one row per generation
     best_per_generation.jsonl best individual of every generation: fitness, game result, bitstring
+    population_fitness.csv    fitness, progress, time and outcome of every individual in every generation
     best.json                 best individual so far (same fields)
     best_actions.json         its decoded actions, playable with `python -m gallop replay`
     checkpoint.npz            the latest whole population + RNG state, for --resume
@@ -27,6 +28,8 @@ from gallop import Result
 from .fitness import Evaluation
 from .ga import Checkpoint, GAConfig, GenerationStats, Population, config_dict, config_from_dict
 from .genome import Genome, decode
+
+POPULATION_COLUMNS = ["generation", "individual", "fitness", "progress", "time", "cleared", "death_cause"]
 
 
 def _write_atomic(path: Path, write) -> None:
@@ -58,6 +61,7 @@ class RunDir:
         self.config_file = self.path / "config.json"
         self.history_file = self.path / "history.csv"
         self.bests_file = self.path / "best_per_generation.jsonl"
+        self.population_file = self.path / "population_fitness.csv"
         self.best_file = self.path / "best.json"
         self.best_actions_file = self.path / "best_actions.json"
         self.checkpoint_file = self.path / "checkpoint.npz"
@@ -70,6 +74,7 @@ class RunDir:
             raise FileExistsError(f"{self.path} already holds a run; resume it or choose another directory")
         self.path.mkdir(parents=True, exist_ok=True)
         self.bests_file.unlink(missing_ok=True)
+        self.population_file.unlink(missing_ok=True)
         self.save_config(config)
 
     def save_config(self, config: GAConfig) -> None:
@@ -83,12 +88,25 @@ class RunDir:
             f.write(json.dumps(record) + "\n")
         self.best_file.write_text(json.dumps(record, indent=2) + "\n")
         self.best_actions_file.write_text(json.dumps(decode(genome)) + "\n")
+        self._append_population(cp)
         with self.history_file.open("w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=[fl.name for fl in fields(GenerationStats)])
             writer.writeheader()
             writer.writerows(asdict(s) for s in cp.history)
         # Written last: a checkpoint for generation N means every file above covers generation N too.
         self.save_checkpoint(cp)
+
+    def _append_population(self, cp: Checkpoint) -> None:
+        new = not self.population_file.exists()
+        with self.population_file.open("a", newline="") as f:
+            writer = csv.writer(f)
+            if new:
+                writer.writerow(POPULATION_COLUMNS)
+            # Sorted best first, so `individual` is the rank within the generation.
+            ranked = sorted(cp.population.evaluations, key=lambda e: e.fitness)
+            for rank, e in enumerate(ranked):
+                r = e.result
+                writer.writerow([cp.generation, rank, e.fitness, r.progress, r.time, r.cleared, r.death_cause or ""])
 
     def save_checkpoint(self, cp: Checkpoint) -> None:
         pop = cp.population
@@ -130,10 +148,27 @@ class RunDir:
         lines = self.bests_file.read_text().splitlines()
         return [json.loads(line) for line in lines if line.strip()]
 
-    def truncate_bests(self, last_generation: int) -> None:
-        """Drop records newer than the checkpoint (written just before an interrupted checkpoint save)."""
+    def population_fitness(self) -> list[dict[str, str]]:
+        """Rows of population_fitness.csv (values as strings, as csv reads them)."""
+        if not self.population_file.exists():
+            return []
+        with self.population_file.open(newline="") as f:
+            return list(csv.DictReader(f))
+
+    def truncate_to(self, last_generation: int) -> None:
+        """Drop per-generation records newer than the checkpoint.
+
+        They exist if a run was stopped after recording a generation but before its checkpoint was saved;
+        resuming will produce those generations again.
+        """
         kept = [r for r in self.bests() if r["generation"] <= last_generation]
         self.bests_file.write_text("".join(json.dumps(r) + "\n" for r in kept))
+        if self.population_file.exists():
+            rows = [r for r in self.population_fitness() if int(r["generation"]) <= last_generation]
+            with self.population_file.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=POPULATION_COLUMNS)
+                writer.writeheader()
+                writer.writerows(rows)
 
     def best_record(self, generation: int | None = None) -> dict[str, Any]:
         """Best of the given generation, or the best individual of the whole run so far."""
