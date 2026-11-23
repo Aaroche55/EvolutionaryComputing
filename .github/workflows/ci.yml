@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, type check and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      # Python version comes from .python-version; dev tools (pytest, ruff, ty) from the dev group.
+      # The render extra (pygame-ce) lets ty check the viewer; the tests themselves stay headless.
+      - name: Install
+        id: install
+        run: uv sync --locked --extra render
+
+      # Each check runs even if an earlier check fails, so one push reports every problem.
+      - name: Ruff lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run ruff check --output-format github .
+
+      - name: Ruff format
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run ruff format --check .
+
+      - name: ty
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run ty check --output-format github
+
+      - name: pytest
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: uv run pytest
