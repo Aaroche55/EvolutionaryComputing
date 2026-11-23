@@ -93,6 +93,33 @@ The format is defined by the pydantic models in `gallop/schema.py` (`LevelSpec`)
 it, so unknown keys, unknown terrain types, reversed spans (`x1 < x0`), negative coordinates and a goal or
 spawn outside the level raise `pydantic.ValidationError` with the offending field.
 
+## Genetic algorithm
+
+`evolution/` evolves 6000-bit genomes (1000 genes of 6 bits; gene value mod 6 = action) to play level 1.
+Fitness is minimised: `(1 - progress) + min(time, 200) / 200`. Defaults: population 400, random parent
+pairs, single point crossover, bit-flip mutation at 1/6000, parents + children culled back to 400 by
+negative tournaments of size 3. See `journal.md` for the reasoning.
+
+```sh
+uv run python -m evolution train --generations 100 --seed 1         # new run in runs/seed1 (all CPU cores)
+uv run python -m evolution train --resume runs/seed1 --generations 200   # continue it (after Ctrl-C too)
+uv run python -m evolution replay runs/seed1                        # watch the best genome so far
+uv run python -m evolution replay runs/seed1 --generation 10        # ...or the best of generation 10
+```
+
+A run directory is updated after every generation:
+
+| file | contents |
+|---|---|
+| `config.json` | the full configuration, enough to reproduce the run |
+| `history.csv` | best, worst, mean, median and std fitness per generation |
+| `best_per_generation.jsonl` | the best individual of every generation (fitness, game result, bitstring) |
+| `best.json`, `best_actions.json` | the best so far; `best_actions.json` also plays with `python -m gallop replay` |
+| `checkpoint.npz` | the latest whole population and RNG state, used by `--resume` |
+
+Ctrl-C loses at most the generation in progress. A resumed run gives exactly the same results as one that was
+never stopped, and runs are fully determined by `--seed` whatever `--workers` is.
+
 ## Command line
 
 ```sh
@@ -123,5 +150,12 @@ gallop/
   render.py      optional pygame viewer + keyboard controller
   __main__.py    CLI
   levels/level1.json
-tests/           level, physics and API tests; data/level1_solution.json clears level 1
+evolution/
+  genome.py      bitstring genome: random init, decode, encode
+  fitness.py     play a genome, compute fitness
+  operators.py   crossover, mutation, negative tournament cull
+  ga.py          GAConfig and the generation loop
+  rundir.py      saving/loading run directories and checkpoints
+  __main__.py    CLI: train, resume, replay
+tests/           level, physics, API and GA tests; data/level1_solution.json clears level 1
 ```
