@@ -319,3 +319,44 @@ def test_cli_train_then_resume(tmp_path, capsys):
     assert rd.load_config().generations == 3
     straight = GeneticAlgorithm(replace(rd.load_config(), workers=1)).run()
     assert rd.load_checkpoint().history == straight.history
+
+
+# ---------- plotting
+
+
+def test_plot_writes_png_and_reads_curves(tmp_path):
+    pytest.importorskip("matplotlib")
+    from evolution.plot import load_curves, plot
+
+    rd = RunDir(tmp_path)
+    rd.start(small_config(3))
+    run = GeneticAlgorithm(small_config(3)).run(on_generation=rd.record)
+    c = load_curves(rd)
+    assert c.generation.tolist() == [0, 1, 2, 3]
+    assert c.best.tolist() == [s.best for s in run.history]
+    assert c.q25 is not None
+    assert c.q75 is not None
+    assert (c.q25 <= c.q75).all()
+    assert c.first_clear is None  # 20 s, 100-gene games of random genomes don't clear the level
+    assert np.isnan(c.fastest_clear).all()
+    out = plot(rd, tmp_path / "progress.png")
+    assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_clear_times_come_from_clearing_individuals(tmp_path, solution):
+    pytest.importorskip("matplotlib")
+    from evolution.ga import Checkpoint, Population, config_from_dict
+    from evolution.plot import load_curves
+
+    config = config_from_dict({"population_size": 2, "generations": 0})
+    clearer = encode(solution + [0] * (1000 - len(solution)))
+    stander = encode([0] * 1000)
+    genomes = np.stack([clearer, stander])
+    pop = Population(genomes, [evaluate(g) for g in genomes])
+    rd = RunDir(tmp_path)
+    rd.start(config)
+    history = [GeneticAlgorithm(config).stats(0, pop)]
+    rd.record(Checkpoint(0, pop, {}, 2, history))
+    c = load_curves(rd)
+    assert c.first_clear == 0
+    assert c.fastest_clear[0] == pytest.approx(pop.evaluations[0].result.time)

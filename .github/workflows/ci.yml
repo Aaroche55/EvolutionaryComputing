@@ -25,10 +25,10 @@ jobs:
           enable-cache: true
 
       # Python version comes from .python-version; dev tools (pytest, ruff, ty) from the dev group.
-      # The render extra (pygame-ce) lets ty check the viewer; the tests themselves stay headless.
+      # All extras (pygame-ce viewer, matplotlib plots) so ty can check them; the tests stay headless.
       - name: Install
         id: install
-        run: uv sync --locked --extra render
+        run: uv sync --locked --all-extras
 
       # Each check runs even if an earlier check fails, so one push reports every problem.
       - name: Ruff lint

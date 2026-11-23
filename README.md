@@ -9,7 +9,7 @@ Requires [uv](https://docs.astral.sh/uv/). Python is pinned to 3.13 (`.python-ve
 has no wheels for 3.15 yet. The headless game only depends on pydantic (level file validation).
 
 ```sh
-uv sync --extra render     # pygame-ce for the viewer, plus dev tools (pytest, ruff, ty)
+uv sync --all-extras       # pygame-ce viewer, matplotlib plots, and dev tools (pytest, ruff, ty)
 uv run pytest              # run the tests
 uv run ruff check .        # lint
 uv run ruff format .       # format
@@ -105,6 +105,7 @@ uv run python -m evolution train --generations 100 --seed 1         # new run in
 uv run python -m evolution train --resume runs/seed1 --generations 200   # continue it (after Ctrl-C too)
 uv run python -m evolution replay runs/seed1                        # watch the best genome so far
 uv run python -m evolution replay runs/seed1 --generation 10        # ...or the best of generation 10
+uv run python -m evolution plot runs/seed1                          # fitness + clear time -> runs/seed1/progress.png
 ```
 
 A run directory is updated after every generation:
@@ -157,6 +158,7 @@ evolution/
   operators.py   crossover, mutation, negative tournament cull
   ga.py          GAConfig and the generation loop
   rundir.py      saving/loading run directories and checkpoints
+  plot.py        fitness and clear-time plots (needs the plot extra)
   __main__.py    CLI: train, resume, replay
 tests/           level, physics, API and GA tests; data/level1_solution.json clears level 1
 ```

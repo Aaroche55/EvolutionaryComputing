@@ -4,6 +4,7 @@
     python -m evolution train --resume runs/seed1 --generations 200   continue a stopped/finished run
     python -m evolution replay runs/seed1                       watch the best genome so far
     python -m evolution replay runs/seed1 --generation 10       watch the best of generation 10
+    python -m evolution plot runs/seed1                         fitness and clear time -> runs/seed1/progress.png
 
 See rundir.py for the files a run directory holds.
 """
@@ -92,6 +93,14 @@ def replay(args: argparse.Namespace) -> None:
     print(game.result())
 
 
+def plot(args: argparse.Namespace) -> None:
+    from .plot import plot as plot_run
+
+    run_dir = RunDir(args.run)
+    out = plot_run(run_dir, args.out or run_dir.path / "progress.png")
+    print(f"saved {out}")
+
+
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="evolution", description="Evolve action sequences for Ballinasloe Gallop.")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -114,11 +123,12 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--generation", type=int, help="best of this generation (default: best so far)")
     r.add_argument("--speed", type=float, default=1.0)
 
+    p = sub.add_parser("plot", help="plot fitness and clear time across generations (needs the plot extra)")
+    p.add_argument("run", type=Path, help="run directory, e.g. runs/seed1")
+    p.add_argument("--out", type=Path, help="image file (default RUN/progress.png)")
+
     args = ap.parse_args(argv)
-    if args.cmd == "train":
-        train(args)
-    else:
-        replay(args)
+    {"train": train, "replay": replay, "plot": plot}[args.cmd](args)
 
 
 if __name__ == "__main__":
