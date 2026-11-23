@@ -35,8 +35,8 @@ from .constants import (
     STOMP_BOUNCE,
     STOMP_BOUNCE_HELD,
     STOMP_FREEZE,
-    T,
     WATER,
+    T,
 )
 from .level import Level
 
@@ -133,17 +133,17 @@ class World:
         if self.freeze > 0:
             self.freeze -= STEP
             return
-        P = self.player
-        if P.dead > 0:
-            P.dead -= STEP
-            if P.dead <= 0:
+        p = self.player
+        if p.dead > 0:
+            p.dead -= STEP
+            if p.dead <= 0:
                 self._respawn()
         else:
             self._update_player(STEP, action.direction, self._pending_jump, held)
             self._pending_jump = False
             self.time += STEP
             self._interact(held)
-            self.best_x = max(self.best_x, P.x + P.w)
+            self.best_x = max(self.best_x, p.x + p.w)
         if self.over:
             return
         self._update_geese(STEP)
@@ -151,86 +151,86 @@ class World:
     # ---------- player
 
     def _update_player(self, dt: float, direction: int, jump_pressed: bool, jump_held: bool) -> None:
-        P = self.player
-        if P.on_ground:
-            acc = ACC_GROUND_IDLE if direction == 0 else (ACC_GROUND_TURN if P.vx * direction < 0 else ACC_GROUND_RUN)
+        p = self.player
+        if p.on_ground:
+            acc = ACC_GROUND_IDLE if direction == 0 else (ACC_GROUND_TURN if p.vx * direction < 0 else ACC_GROUND_RUN)
         else:
             acc = ACC_AIR_IDLE if direction == 0 else ACC_AIR_RUN
-        P.vx = approach(P.vx, direction * RUN, acc * dt)
+        p.vx = approach(p.vx, direction * RUN, acc * dt)
         if direction:
-            P.face = direction
+            p.face = direction
 
-        P.coyote = COYOTE if P.on_ground else P.coyote - dt
-        P.buffer = BUFFER if jump_pressed else P.buffer - dt
-        if P.buffer > 0 and P.coyote > 0:
-            P.vy = -JUMP
-            P.buffer = P.coyote = 0.0
-            P.on_ground = False
+        p.coyote = COYOTE if p.on_ground else p.coyote - dt
+        p.buffer = BUFFER if jump_pressed else p.buffer - dt
+        if p.buffer > 0 and p.coyote > 0:
+            p.vy = -JUMP
+            p.buffer = p.coyote = 0.0
+            p.on_ground = False
 
         g = GRAV
-        if P.vy < 0 and not jump_held:
+        if p.vy < 0 and not jump_held:
             g *= 2.5  # short hop when jump is released early
-        elif abs(P.vy) < 80 and jump_held:
+        elif abs(p.vy) < 80 and jump_held:
             g *= 0.5  # floaty apex
-        elif P.vy > 0:
+        elif p.vy > 0:
             g *= 1.25  # snappy fall
-        P.vy = min(P.vy + g * dt, FALLMAX)
+        p.vy = min(p.vy + g * dt, FALLMAX)
 
-        self._move_x(P.vx * dt)
-        self._move_y(P.vy * dt)
+        self._move_x(p.vx * dt)
+        self._move_y(p.vy * dt)
 
     def _move_x(self, dx: float) -> None:
-        P = self.player
-        P.x += dx
-        y0, y1 = floor(P.y / T), floor((P.y + P.h - 0.001) / T)
+        p = self.player
+        p.x += dx
+        y0, y1 = floor(p.y / T), floor((p.y + p.h - 0.001) / T)
         if dx > 0:
-            tx = floor((P.x + P.w) / T)
+            tx = floor((p.x + p.w) / T)
             for y in range(y0, y1 + 1):
                 if self.solid_at(tx, y):
-                    P.x = tx * T - P.w
-                    P.vx = min(P.vx, 0)
+                    p.x = tx * T - p.w
+                    p.vx = min(p.vx, 0)
                     break
         elif dx < 0:
-            tx = floor(P.x / T)
+            tx = floor(p.x / T)
             for y in range(y0, y1 + 1):
                 if self.solid_at(tx, y):
-                    P.x = (tx + 1) * T
-                    P.vx = max(P.vx, 0)
+                    p.x = (tx + 1) * T
+                    p.vx = max(p.vx, 0)
                     break
 
     def _move_y(self, dy: float) -> None:
-        P = self.player
-        prev_bot = P.y + P.h
-        P.y += dy
-        P.on_ground = False
-        x0, x1 = floor(P.x / T), floor((P.x + P.w - 0.001) / T)
+        p = self.player
+        prev_bot = p.y + p.h
+        p.y += dy
+        p.on_ground = False
+        x0, x1 = floor(p.x / T), floor((p.x + p.w - 0.001) / T)
         if dy > 0:
-            ty = floor((P.y + P.h) / T)
+            ty = floor((p.y + p.h) / T)
             for x in range(x0, x1 + 1):
                 t = self.level.tile(x, ty)
                 # Planks only catch you from above.
                 if t in SOLID_TILES or (t == PLANK and prev_bot <= ty * T + 0.5):
-                    P.y = ty * T - P.h
-                    P.vy = 0.0
-                    P.on_ground = True
+                    p.y = ty * T - p.h
+                    p.vy = 0.0
+                    p.on_ground = True
                     return
         elif dy < 0:
-            ty = floor(P.y / T)
+            ty = floor(p.y / T)
 
             def hits(px: float) -> bool:
-                return any(self.solid_at(x, ty) for x in range(floor(px / T), floor((px + P.w - 0.001) / T) + 1))
+                return any(self.solid_at(x, ty) for x in range(floor(px / T), floor((px + p.w - 0.001) / T) + 1))
 
-            if hits(P.x):
+            if hits(p.x):
                 # Corner correction: slide round a ledge you only clipped.
                 for n in range(1, 7):
-                    if not hits(P.x + n):
-                        P.x += n
+                    if not hits(p.x + n):
+                        p.x += n
                         return
-                    if not hits(P.x - n):
-                        P.x -= n
+                    if not hits(p.x - n):
+                        p.x -= n
                         return
-                P.y = (ty + 1) * T
-                P.vy = 0.0
+                p.y = (ty + 1) * T
+                p.vy = 0.0
 
     # ---------- world
 
@@ -250,39 +250,39 @@ class World:
                 q.x = nx
 
     def _interact(self, jump_held: bool) -> None:
-        P = self.player
-        pcx, pcy = P.x + P.w / 2, P.y + P.h / 2
+        p = self.player
+        pcx, pcy = p.x + p.w / 2, p.y + p.h / 2
         for c in self.coins:
             if not c.got and abs(c.x - pcx) < 14 and abs(c.y - pcy) < 17:
                 c.got = True
         for q in self.geese:
             if q.dead:
                 continue
-            if P.x + P.w > q.x + 2 and P.x < q.x + q.w - 2 and P.y + P.h > q.y + 3 and P.y < q.y + q.h:
-                if P.vy > 0 and P.y + P.h - q.y < 11:
+            if p.x + p.w > q.x + 2 and p.x < q.x + q.w - 2 and p.y + p.h > q.y + 3 and p.y < q.y + q.h:
+                if p.vy > 0 and p.y + p.h - q.y < 11:
                     q.dead = True
                     self.stomps += 1
-                    P.vy = -(STOMP_BOUNCE_HELD if jump_held else STOMP_BOUNCE)
-                    P.coyote = 0.0
+                    p.vy = -(STOMP_BOUNCE_HELD if jump_held else STOMP_BOUNCE)
+                    p.coyote = 0.0
                     self.freeze = STOMP_FREEZE
                 else:
                     self._kill("goose")
                     return
-        if self.level.tile(floor(pcx / T), floor((P.y + P.h - 4) / T)) == WATER:
+        if self.level.tile(floor(pcx / T), floor((p.y + p.h - 4) / T)) == WATER:
             self._kill("water")
             return
-        if P.y > self.level.rows * T + 40:
+        if p.y > self.level.rows * T + 40:
             self._kill("fall")
             return
-        if P.x + P.w > self.level.goal_x:
+        if p.x + p.w > self.level.goal_x:
             self.cleared = True
             self.over = True
 
     def _kill(self, cause: str) -> None:
-        P = self.player
-        if P.dead > 0:
+        p = self.player
+        if p.dead > 0:
             return
-        P.dead = DEAD_T
+        p.dead = DEAD_T
         self.falls += 1
         self.death_cause = cause
         if self.end_on_death:
@@ -290,8 +290,8 @@ class World:
 
     def _respawn(self) -> None:
         # No checkpoints: always back to the level start.
-        P = self.player
-        P.x, P.y = self.level.spawn
-        P.vx = P.vy = P.buffer = 0.0
-        P.on_ground = False
-        P.dead = 0.0
+        p = self.player
+        p.x, p.y = self.level.spawn
+        p.vx = p.vy = p.buffer = 0.0
+        p.on_ground = False
+        p.dead = 0.0

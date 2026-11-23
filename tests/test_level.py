@@ -1,4 +1,4 @@
-from gallop.constants import EMPTY, GROUND, HAY, PH, PLANK, T, WATER
+from gallop.constants import EMPTY, GROUND, HAY, PH, PLANK, WATER, T
 from gallop.level import load_level
 
 
@@ -6,16 +6,19 @@ def test_level1_loads_from_json():
     lv = load_level(1)
     assert lv.name == "The Fair Green"
     assert (lv.width, lv.rows) == (200, 17)
-    assert len(lv.grid) == 17 and all(len(r) == 200 for r in lv.grid)
+    assert len(lv.grid) == 17
+    assert all(len(r) == 200 for r in lv.grid)
     assert len(lv.coins) == 38
     assert len(lv.geese) == 4
 
 
 def test_level1_terrain_matches_reference():
     lv = load_level(1)
-    assert lv.grid[14][0] == GROUND and lv.grid[13][0] == EMPTY
+    assert lv.grid[14][0] == GROUND
+    assert lv.grid[13][0] == EMPTY
     assert all(lv.top_at(x) == lv.rows for x in (29, 30, 31))  # first pit
-    assert lv.grid[12][17] == HAY and lv.grid[13][16] == HAY
+    assert lv.grid[12][17] == HAY
+    assert lv.grid[13][16] == HAY
     assert lv.top_at(60) == 12  # raised ground
     assert lv.grid[8][84] == PLANK
     assert lv.top_at(100) == 13

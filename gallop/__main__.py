@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from pathlib import Path
 
 from .actions import Action
 from .game import DEFAULT_TICKS_PER_ACTION, Game
@@ -44,7 +45,7 @@ def main(argv: list[str] | None = None) -> None:
 
         game = Game(keyboard_controller, args.level, ticks_per_action=1, max_time=300, end_on_death=False, render=True)
     elif args.cmd == "replay":
-        actions = json.loads(open(args.file).read())
+        actions = json.loads(Path(args.file).read_text())
         game = Game(
             sequence_controller(actions),
             args.level,

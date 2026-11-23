@@ -6,11 +6,14 @@ built as the environment for an evolutionary algorithm.
 ## Setup
 
 Requires [uv](https://docs.astral.sh/uv/). Python is pinned to 3.13 (`.python-version`) because pygame-ce
-has no wheels for 3.15 yet; the headless game itself has no dependencies.
+has no wheels for 3.15 yet. The headless game only depends on pydantic (level file validation).
 
 ```sh
-uv sync --extra render     # pygame-ce for the viewer, pytest for tests
+uv sync --extra render     # pygame-ce for the viewer, plus dev tools (pytest, ruff, ty)
 uv run pytest              # run the tests
+uv run ruff check .        # lint
+uv run ruff format .       # format
+uv run ty check            # type check
 ```
 
 ## Controller API
@@ -86,6 +89,10 @@ bottom. `terrain` entries are applied in order:
 
 plus `horseshoes [{x0, x1, y}]`, `geese [{x, top, speed}]`, `spawn_x` and `goal {x}`.
 
+The format is defined by the pydantic models in `gallop/schema.py` (`LevelSpec`). Loading a level validates
+it, so unknown keys, unknown terrain types, reversed spans (`x1 < x0`), negative coordinates and a goal or
+spawn outside the level raise `pydantic.ValidationError` with the offending field.
+
 ## Command line
 
 ```sh
@@ -109,6 +116,7 @@ uv run python -m gallop bench                                    # headless spee
 gallop/
   actions.py     Action enum
   constants.py   physics constants from the reference
+  schema.py      pydantic models for the level JSON format
   level.py       JSON level loading -> tile grid
   engine.py      World: deterministic 120 Hz simulation
   game.py        Game / Result: the controller API

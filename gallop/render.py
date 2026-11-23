@@ -9,7 +9,7 @@ from __future__ import annotations
 import pygame
 
 from .actions import Action
-from .constants import GROUND, HAY, PLANK, STONE, T, WATER
+from .constants import GROUND, HAY, PLANK, STONE, WATER, T
 from .engine import World
 
 VW, VH, SCALE = 480, 272, 2
@@ -72,8 +72,8 @@ class Renderer:
         pygame.quit()
 
     def draw(self, action: Action | None, banner: str | None = None) -> None:
-        w, lv, P, g = self.world, self.world.level, self.world.player, self.low
-        target = min(max(P.x + P.w / 2 - VW / 2 + P.face * 36, 0), lv.width * T - VW)
+        w, lv, p, g = self.world, self.world.level, self.world.player, self.low
+        target = min(max(p.x + p.w / 2 - VW / 2 + p.face * 36, 0), lv.width * T - VW)
         self.cam_x += (target - self.cam_x) * 0.2
         cx = round(self.cam_x)
 
@@ -104,9 +104,9 @@ class Renderer:
                 g.fill(COLORS["goose"], (q.x - cx, q.y, q.w, q.h))
                 bx = q.x - cx + (q.w if q.vx > 0 else -3)
                 g.fill(COLORS["beak"], (bx, q.y + 1, 3, 2))
-        if P.dead <= 0 or not w.over:
-            g.fill(COLORS["pony"], (P.x - cx, P.y + 8, P.w, P.h - 8))
-            g.fill(COLORS["rider"], (P.x - cx + 6, P.y, 6, 9))
+        if p.dead <= 0 or not w.over:
+            g.fill(COLORS["pony"], (p.x - cx, p.y + 8, p.w, p.h - 8))
+            g.fill(COLORS["rider"], (p.x - cx + 6, p.y, 6, 9))
 
         hud = f"{lv.name}   t={w.time:5.2f}s   progress {w.progress:.3f}   shoes {w.shoes}/{len(w.coins)}"
         if action is not None:

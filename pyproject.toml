@@ -3,7 +3,9 @@ name = "gallop"
 version = "0.1.0"
 description = "Headless Python port of Ballinasloe Gallop (level 1) for evolutionary computing"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.4",
+]
 
 [project.optional-dependencies]
 render = ["pygame-ce>=2.5"]

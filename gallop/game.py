@@ -19,14 +19,16 @@ game.max_steps), the game raises GenomeExhausted instead.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any
 
 from .actions import Action
 from .constants import STEP
 from .engine import World
 from .level import load_level
+from .schema import LevelSpec
 
 Controller = Callable[[int], "Action | int"]
 
@@ -65,7 +67,7 @@ class Game:
     def __init__(
         self,
         func: Controller,
-        level: int | str | Path | dict = 1,
+        level: int | str | Path | dict[str, Any] | LevelSpec = 1,
         *,
         ticks_per_action: int = DEFAULT_TICKS_PER_ACTION,
         max_time: float = 60.0,
@@ -75,7 +77,7 @@ class Game:
     ):
         """
         func:             controller, called as func(t) -> Action.
-        level:            level number, path to a level JSON file, or a parsed level dict.
+        level:            level number, path to a level JSON file, a parsed level dict, or a LevelSpec.
         ticks_per_action: physics ticks (1/120 s each) an action is held; 24 -> 5 decisions per second.
         max_time:         game ends (timed out) after this many seconds of simulated time.
         end_on_death:     end the game on the first death. If False the player respawns at the

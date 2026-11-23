@@ -1,7 +1,7 @@
 import pytest
 
 from gallop.actions import Action
-from gallop.constants import JUMP, PH, RUN, T
+from gallop.constants import PH, RUN, T
 
 from conftest import flat_level, make_world
 
@@ -122,7 +122,8 @@ def test_falling_in_pit_kills():
     data["terrain"] = [{"type": "ground", "x0": 0, "x1": 5, "top": 14}]
     w = make_world(data)
     run(w, Action.RIGHT, 600)
-    assert w.over and not w.cleared
+    assert w.over
+    assert not w.cleared
     assert w.death_cause == "fall"
 
 
@@ -137,7 +138,8 @@ def test_water_kills():
 def test_walking_into_goose_kills():
     w = make_world(flat_level(geese=[{"x": 8, "top": 14}]))
     run(w, Action.RIGHT, 600)
-    assert w.over and w.death_cause == "goose"
+    assert w.over
+    assert w.death_cause == "goose"
     assert w.stomps == 0
 
 
@@ -152,7 +154,8 @@ def test_stomping_goose_bounces_and_kills_it():
         if w.stomps:
             bounced = w.player.vy < 0
             break
-    assert w.stomps == 1 and w.geese[0].dead
+    assert w.stomps == 1
+    assert w.geese[0].dead
     assert bounced
     assert not w.over
 
@@ -168,7 +171,8 @@ def test_geese_turn_at_ledges():
     for _ in range(1200):
         w._update_geese(1 / 120)
         xs.append(w.geese[0].x)
-    assert min(xs) >= 10 * T - 1 and max(xs) + 16 <= 16 * T + 1
+    assert min(xs) >= 10 * T - 1
+    assert max(xs) + 16 <= 16 * T + 1
 
 
 def test_horseshoe_collected():
@@ -180,7 +184,8 @@ def test_horseshoe_collected():
 def test_reaching_goal_clears():
     w = make_world(flat_level(width=40, goal=10))
     run(w, Action.RIGHT, 600)
-    assert w.cleared and w.over
+    assert w.cleared
+    assert w.over
     assert w.progress == 1.0
 
 
@@ -191,7 +196,8 @@ def test_respawn_when_not_ending_on_death():
         x = w.player.x
         w.step(Action.RIGHT)
         respawned |= w.player.x < x - T
-    assert w.falls >= 1 and respawned
+    assert w.falls >= 1
+    assert respawned
     assert not w.over
 
 
