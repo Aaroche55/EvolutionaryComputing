@@ -104,6 +104,17 @@ negative tournaments of size 3. See `journal.md` for the reasoning.
 `time / max_time` (0–1), non-clears `2 - progress` (1–2), so dying early earns nothing. `max_time` must fit
 in the genome (genes / 5 seconds), e.g. `--genes 400 --max-time 80`.
 
+Training plays games with `gallop/fast.py`, a numba-compiled copy of the engine that gives bit-identical
+results about 150x faster (about 0.1 ms per game; 100 generations of 2000 in about 12 s on 12 cores). The
+first call compiles it (a few seconds, cached afterwards in `__pycache__`). `engine.py` remains the
+reference, used for replay and rendering; `tests/test_fast.py` checks the two agree. A change to the game
+rules must be made in both.
+
+```python
+from gallop.fast import simulate
+result = simulate(actions, level=1, ticks_per_action=24, max_time=80.0)   # same Result as Game(...).run_full()
+```
+
 ```sh
 uv run python -m evolution train --generations 100 --seed 1         # new run in runs/seed1 (all CPU cores)
 uv run python -m evolution train --resume runs/seed1 --generations 200   # continue it (after Ctrl-C too)
@@ -152,6 +163,7 @@ gallop/
   schema.py      pydantic models for the level JSON format
   level.py       JSON level loading -> tile grid
   engine.py      World: deterministic 120 Hz simulation
+  fast.py        numba-compiled engine for training: simulate(actions) -> Result
   game.py        Game / Result: the controller API
   render.py      optional pygame viewer + keyboard controller
   __main__.py    CLI
@@ -164,5 +176,5 @@ evolution/
   rundir.py      saving/loading run directories and checkpoints
   plot.py        fitness and clear-time plots (needs the plot extra)
   __main__.py    CLI: train, resume, replay
-tests/           level, physics, API and GA tests; data/level1_solution.json clears level 1
+tests/           level, physics, API, compiled-engine equivalence and GA tests; data/level1_solution.json clears level 1
 ```

@@ -103,8 +103,53 @@ consistently gave better final times. The best GA result is still 5.4 s slower t
 claiming any effect; consider explicit diversity preservation, e.g. not letting duplicate genomes survive
 the cull.
 
+## 2026-11-23 — Speeding up training: Numba vs GPU
+
+At population 2000 a batch of 100 generations took about 10 minutes, too slow for 30 seeded runs per
+setting. Profiling showed that playing the games was essentially all of the cost (about 5 µs per physics
+tick in pure Python, 15–30 ms per game); the GA operators are negligible. Games are independent, and they
+already ran in parallel on all 12 cores, so the remaining lever was the speed of a single game.
+
+**Numba (adopted).** `gallop/fast.py` is a line-by-line translation of the engine into plain variables and
+numpy arrays, compiled to machine code with Numba. It uses the same float64 arithmetic in the same order, so
+results are bit-identical to the reference engine. We checked this on 685 games covering clears, falls,
+goose deaths, stomps, timeouts and respawns, and by re-running seed 6 for 100 generations, which reproduced
+the original history exactly. One game now takes about 0.1 ms (≈150× faster), and 100 generations at
+population 2000 take about 12 s instead of about 10 minutes. The cost is that the game rules now exist
+twice; equivalence tests catch any drift between the two. The Python engine remains the reference, used for
+replay and rendering.
+
+**GPU (tried, rejected).** We also wrote a batched PyTorch engine (`gallop/gpu.py`, on the `gpu-engine`
+branch) that advances every game of a population one tick at a time, with each `if` of the engine turned
+into a mask. It runs on the Apple GPU (MPS) and was compiled with `torch.compile` to fuse operations into
+fewer kernels. Getting it to compile at all needed the state packed into a few tensors, and a cap on buffers
+per kernel, because Metal allows at most 31. On the CPU in float64 it is bit-identical to Numba.
+
+| Games | Numba (12 cores) | GPU (compiled) | GPU ÷ Numba |
+|---|---|---|---|
+| 10 k, late-training population | 108 k games/s | 6.5 k games/s | 0.06× |
+| 100 k, late-training population | 118 k games/s | 24 k games/s | 0.21× |
+| 1 M, late-training population | 106 k games/s | 29 k games/s | 0.27× |
+| 1 M, random population | 40 k games/s | 10 k games/s | 0.26× |
+
+The GPU stayed about 4× slower even at a million games, for three reasons:
+- Ticks are sequential, so every one of up to 9600 ticks costs several kernel launches and a full pass of
+  the state through memory, while Numba keeps a game's state in registers.
+- Masking means every game pays for every branch on every tick, e.g. the 13 corner-correction checks.
+- The work per game is small and branchy, unlike the large dense arithmetic GPUs are built for.
+
+Precision was a second problem. Apple GPUs have no float64, and in float32 only 93% of past runs' best
+genomes ended the same way as in float64, with 41 of 205 clears lost. Evolved genomes are tuned to the exact
+physics, so training on a float32 GPU would evolve against slightly different physics.
+
+**Takeaways.** For a small, branchy, sequential simulation, compiling the per-game loop and running games
+in parallel on CPU cores beats data-parallel GPU execution. Measuring first (where does the time go?)
+pointed straight at the engine. With training now about 50× faster, 30 seeded runs per setting are
+practical.
+
 ## References
 
 [1] Code Bullet, YouTube channel. https://www.youtube.com/@CodeBullet
 
-[2] Anthropic, Claude Code (model: Claude Opus 5.5), used to port the game to Python, implement the GA, and run and summarise the experiments.
+[2] Anthropic, Claude Code (model: Claude Opus 5.5), used to port the game to Python, implement the GA and the Numba and GPU engines, and run and summarise
+the experiments.

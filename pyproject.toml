@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Headless Python port of Ballinasloe Gallop (level 1) for evolutionary computing"
 requires-python = ">=3.11"
 dependencies = [
+    "numba>=0.68.1",
     "numpy>=2.4.6",
     "pydantic>=2.14.4",
 ]

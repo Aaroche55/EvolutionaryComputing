@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from gallop import Game, Result
+from gallop.fast import simulate
 
 from .genome import Genome, decode
 
@@ -51,10 +52,20 @@ def evaluate(
     ticks_per_action: int = DEFAULT_TICKS_PER_ACTION,
     level: int = 1,
     fitness_function: str = "sum",
+    engine: str = "numba",
 ) -> Evaluation:
-    """Play one full game controlled by `genome` and return its fitness and the game result."""
+    """Play one full game controlled by `genome` and return its fitness and the game result.
+
+    engine "numba" uses the compiled gallop.fast.simulate; "python" plays through gallop.Game (the reference,
+    about 150x slower). Both give identical results.
+    """
     actions = decode(genome)
-    game = Game(func=actions.__getitem__, level=level, ticks_per_action=ticks_per_action, max_time=max_time)
-    game.run_full()
-    result = game.result()
+    if engine == "numba":
+        result = simulate(actions, level, ticks_per_action=ticks_per_action, max_time=max_time)
+    elif engine == "python":
+        game = Game(func=actions.__getitem__, level=level, ticks_per_action=ticks_per_action, max_time=max_time)
+        game.run_full()
+        result = game.result()
+    else:
+        raise ValueError(f"unknown engine {engine!r}; choose 'numba' or 'python'")
     return Evaluation(fitness(result, max_time, fitness_function), result)
