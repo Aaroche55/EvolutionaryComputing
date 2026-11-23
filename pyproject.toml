@@ -14,6 +14,9 @@ render = ["pygame-ce>=2.5"]
 plot = [
     "matplotlib>=3.11.2",
 ]
+gpu = [
+    "torch>=2.15.0",
+]
 
 [dependency-groups]
 dev = [
@@ -63,3 +66,12 @@ known-local-folder = ["conftest"]
 
 [tool.ty.environment]
 python-version = "3.13"
+
+# CPU-only torch wheels on Linux (CI): the default PyPI build bundles CUDA, gigabytes we don't need.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

@@ -115,6 +115,15 @@ from gallop.fast import simulate
 result = simulate(actions, level=1, ticks_per_action=24, max_time=80.0)   # same Result as Game(...).run_full()
 ```
 
+`gallop/gpu.py` is an experimental batched engine in PyTorch (install with `uv sync --extra gpu`): it steps
+a whole population at once, as tensors, on the CPU or an Apple GPU. On the CPU in float64 it matches the
+other engines exactly; Apple GPUs only support float32, so results there differ slightly. On an M4 Pro it was
+about 4x slower than Numba even at a million games, so training doesn't use it (see `journal.md`).
+
+```sh
+uv run --extra gpu python benchmarks/engines.py 10000 100000 1000000   # Numba vs GPU throughput
+```
+
 ```sh
 uv run python -m evolution train --generations 100 --seed 1         # new run in runs/seed1 (all CPU cores)
 uv run python -m evolution train --resume runs/seed1 --generations 200   # continue it (after Ctrl-C too)
@@ -164,6 +173,7 @@ gallop/
   level.py       JSON level loading -> tile grid
   engine.py      World: deterministic 120 Hz simulation
   fast.py        numba-compiled engine for training: simulate(actions) -> Result
+  gpu.py         experimental batched PyTorch engine (CPU/Apple GPU), needs the gpu extra
   game.py        Game / Result: the controller API
   render.py      optional pygame viewer + keyboard controller
   __main__.py    CLI
@@ -176,5 +186,6 @@ evolution/
   rundir.py      saving/loading run directories and checkpoints
   plot.py        fitness and clear-time plots (needs the plot extra)
   __main__.py    CLI: train, resume, replay
+benchmarks/      engines.py: Numba vs GPU throughput
 tests/           level, physics, API, compiled-engine equivalence and GA tests; data/level1_solution.json clears level 1
 ```
