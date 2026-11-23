@@ -81,11 +81,11 @@ def test_jump_buffer_fires_on_landing():
     ground_y = w.player.y
     run(w, Action.JUMP, 1)
     while not (w.player.vy > 0 and w.player.y > ground_y - 10):
-        w.step(Action.NOOP)             # release, then fall to ~10px above the ground
+        w.step(Action.NOOP)  # release, then fall to ~10px above the ground
     assert not w.player.on_ground
     jumped_again = False
     for _ in range(20):
-        w.step(Action.JUMP)             # pressed in the air, before landing
+        w.step(Action.JUMP)  # pressed in the air, before landing
         jumped_again |= w.player.vy < 0
     assert jumped_again
 
@@ -112,9 +112,9 @@ def test_plank_is_one_way():
     for _ in range(40):
         w.step(Action.JUMP)
         peak = min(peak, w.player.y)
-    assert peak + w.player.h < 11 * T                # rose through the plank
+    assert peak + w.player.h < 11 * T  # rose through the plank
     run(w, Action.NOOP, 120)
-    assert w.player.y + w.player.h == 11 * T         # and landed on top of it
+    assert w.player.y + w.player.h == 11 * T  # and landed on top of it
 
 
 def test_falling_in_pit_kills():
@@ -128,8 +128,7 @@ def test_falling_in_pit_kills():
 
 def test_water_kills():
     data = flat_level()
-    data["terrain"] = [{"type": "ground", "x0": 0, "x1": 5, "top": 14},
-                       {"type": "water", "x0": 6, "x1": 39, "top": 14}]
+    data["terrain"] = [{"type": "ground", "x0": 0, "x1": 5, "top": 14}, {"type": "water", "x0": 6, "x1": 39, "top": 14}]
     w = make_world(data)
     run(w, Action.RIGHT, 600)
     assert w.death_cause == "water"
@@ -160,8 +159,10 @@ def test_stomping_goose_bounces_and_kills_it():
 
 def test_geese_turn_at_ledges():
     data = flat_level(geese=[{"x": 12, "top": 14, "speed": 40}])
-    data["terrain"] = [{"type": "ground", "x0": 0, "x1": 1, "top": 14},
-                       {"type": "ground", "x0": 10, "x1": 15, "top": 14}]
+    data["terrain"] = [
+        {"type": "ground", "x0": 0, "x1": 1, "top": 14},
+        {"type": "ground", "x0": 10, "x1": 15, "top": 14},
+    ]
     w = make_world(data)
     xs = []
     for _ in range(1200):
@@ -197,8 +198,8 @@ def test_respawn_when_not_ending_on_death():
 def test_progress_is_monotonic_best_distance():
     w = make_world(flat_level(width=40, goal=30))
     run(w, Action.RIGHT, 60)
-    run(w, Action.LEFT, 30)             # decelerates, still drifting right
+    run(w, Action.LEFT, 30)  # decelerates, still drifting right
     p = w.progress
-    run(w, Action.LEFT, 120)            # now running back towards the start
+    run(w, Action.LEFT, 120)  # now running back towards the start
     assert w.progress == p
     assert 0 < p < 1

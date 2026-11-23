@@ -28,6 +28,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+extend-exclude = ["*.md"]   # keep hand-aligned code examples in docs as written
 
 [tool.ruff.lint]
 select = [

@@ -1,8 +1,8 @@
 """Command line entry points.
 
-    python -m gallop play                  play level 1 with the keyboard
-    python -m gallop replay actions.json   watch a recorded action sequence (a JSON list of ints)
-    python -m gallop bench                 time headless runs
+python -m gallop play                  play level 1 with the keyboard
+python -m gallop replay actions.json   watch a recorded action sequence (a JSON list of ints)
+python -m gallop bench                 time headless runs
 """
 
 from __future__ import annotations
@@ -41,11 +41,17 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.cmd == "play":
         from .render import keyboard_controller
+
         game = Game(keyboard_controller, args.level, ticks_per_action=1, max_time=300, end_on_death=False, render=True)
     elif args.cmd == "replay":
         actions = json.loads(open(args.file).read())
-        game = Game(sequence_controller(actions), args.level, ticks_per_action=args.ticks_per_action,
-                    render=True, speed=args.speed)
+        game = Game(
+            sequence_controller(actions),
+            args.level,
+            ticks_per_action=args.ticks_per_action,
+            render=True,
+            speed=args.speed,
+        )
     else:
         t0 = time.perf_counter()
         for _ in range(args.n):

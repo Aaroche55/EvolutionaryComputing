@@ -19,18 +19,18 @@ LEVELS_DIR = Path(__file__).parent / "levels"
 @dataclass
 class Level:
     name: str
-    width: int                      # in tiles
+    width: int  # in tiles
     rows: int
-    grid: list[list[int]]           # grid[y][x] -> tile id
-    coins: list[tuple[float, float]]                 # horseshoe centres, px
-    geese: list[tuple[float, float, float]]          # (x, y, vx) of each goose's top-left, px
-    spawn: tuple[float, float]                       # player top-left, px
-    goal_x: float                                    # crossing this (player right edge) clears the level
+    grid: list[list[int]]  # grid[y][x] -> tile id
+    coins: list[tuple[float, float]]  # horseshoe centres, px
+    geese: list[tuple[float, float, float]]  # (x, y, vx) of each goose's top-left, px
+    spawn: tuple[float, float]  # player top-left, px
+    goal_x: float  # crossing this (player right edge) clears the level
     source: dict = field(repr=False, default_factory=dict)
 
     def tile(self, x: int, y: int) -> int:
         if x < 0 or x >= self.width:
-            return STONE                # the level edges act as walls
+            return STONE  # the level edges act as walls
         if y < 0 or y >= self.rows:
             return EMPTY
         return self.grid[y][x]
@@ -86,11 +86,22 @@ def build_level(data: dict) -> Level:
         else:
             raise ValueError(f"unknown terrain type {kind!r}")
 
-    coins = [(x * T + 8, row["y"] * T + 8) for row in data.get("horseshoes", []) for x in range(row["x0"], row["x1"] + 1)]
+    coins = [
+        (x * T + 8, row["y"] * T + 8) for row in data.get("horseshoes", []) for x in range(row["x0"], row["x1"] + 1)
+    ]
     geese = [(g["x"] * T, g["top"] * T - GOOSE_H, -g.get("speed", GOOSE_SPEED)) for g in data.get("geese", [])]
 
-    lv = Level(name=data.get("name", ""), width=w, rows=rows, grid=grid, coins=coins, geese=geese,
-               spawn=(0.0, 0.0), goal_x=0.0, source=data)
+    lv = Level(
+        name=data.get("name", ""),
+        width=w,
+        rows=rows,
+        grid=grid,
+        coins=coins,
+        geese=geese,
+        spawn=(0.0, 0.0),
+        goal_x=0.0,
+        source=data,
+    )
     sx = data.get("spawn_x", 2)
     lv.spawn = (sx * T, lv.top_at(sx) * T - PH)
     # The goal is a shop; the level clears when the player reaches its door (reference: door.x + 6).

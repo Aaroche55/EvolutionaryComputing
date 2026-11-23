@@ -13,9 +13,30 @@ from dataclasses import dataclass
 
 from .actions import Action
 from .constants import (
-    ACC_AIR_IDLE, ACC_AIR_RUN, ACC_GROUND_IDLE, ACC_GROUND_RUN, ACC_GROUND_TURN, BUFFER, COYOTE,
-    DEAD_T, FALLMAX, GOOSE_H, GOOSE_W, GRAV, JUMP, PH, PLANK, PW, RUN, SOLID_TILES, STEP,
-    STOMP_BOUNCE, STOMP_BOUNCE_HELD, STOMP_FREEZE, T, WATER,
+    ACC_AIR_IDLE,
+    ACC_AIR_RUN,
+    ACC_GROUND_IDLE,
+    ACC_GROUND_RUN,
+    ACC_GROUND_TURN,
+    BUFFER,
+    COYOTE,
+    DEAD_T,
+    FALLMAX,
+    GOOSE_H,
+    GOOSE_W,
+    GRAV,
+    JUMP,
+    PH,
+    PLANK,
+    PW,
+    RUN,
+    SOLID_TILES,
+    STEP,
+    STOMP_BOUNCE,
+    STOMP_BOUNCE_HELD,
+    STOMP_FREEZE,
+    T,
+    WATER,
 )
 from .level import Level
 
@@ -38,7 +59,7 @@ class Player:
     on_ground: bool = False
     coyote: float = 0.0
     buffer: float = 0.0
-    dead: float = 0.0       # > 0 while the death animation plays
+    dead: float = 0.0  # > 0 while the death animation plays
 
 
 @dataclass
@@ -67,13 +88,13 @@ class World:
         self.player = Player(*level.spawn)
         self.geese = [Goose(x, y, vx) for x, y, vx in level.geese]
         self.coins = [Coin(x, y) for x, y in level.coins]
-        self.ticks = 0          # physics steps taken
-        self.time = 0.0         # level timer as the reference shows it (paused during hit-stop and death)
+        self.ticks = 0  # physics steps taken
+        self.time = 0.0  # level timer as the reference shows it (paused during hit-stop and death)
         self.freeze = 0.0
         self.falls = 0
         self.stomps = 0
         self.cleared = False
-        self.over = False       # True once cleared, or dead with end_on_death
+        self.over = False  # True once cleared, or dead with end_on_death
         self.death_cause: str | None = None
         self.start_x = self.player.x + self.player.w
         self.best_x = self.start_x
@@ -148,11 +169,11 @@ class World:
 
         g = GRAV
         if P.vy < 0 and not jump_held:
-            g *= 2.5            # short hop when jump is released early
+            g *= 2.5  # short hop when jump is released early
         elif abs(P.vy) < 80 and jump_held:
-            g *= 0.5            # floaty apex
+            g *= 0.5  # floaty apex
         elif P.vy > 0:
-            g *= 1.25           # snappy fall
+            g *= 1.25  # snappy fall
         P.vy = min(P.vy + g * dt, FALLMAX)
 
         self._move_x(P.vx * dt)

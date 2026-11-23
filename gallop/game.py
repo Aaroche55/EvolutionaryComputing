@@ -30,7 +30,7 @@ from .level import load_level
 
 Controller = Callable[[int], "Action | int"]
 
-DEFAULT_TICKS_PER_ACTION = 24   # 120 Hz physics / 24 = 5 decisions per second
+DEFAULT_TICKS_PER_ACTION = 24  # 120 Hz physics / 24 = 5 decisions per second
 
 
 class GameError(Exception):
@@ -48,14 +48,14 @@ class GenomeExhausted(GameError):
 
 @dataclass(frozen=True)
 class Result:
-    progress: float        # 0..1, furthest distance towards the goal; 1.0 means the level was cleared
+    progress: float  # 0..1, furthest distance towards the goal; 1.0 means the level was cleared
     cleared: bool
     died: bool
     death_cause: str | None  # "goose", "fall", "water" or None
     timed_out: bool
-    time: float            # level timer in seconds
-    ticks: int             # physics ticks simulated
-    steps: int             # decisions made (calls to func)
+    time: float  # level timer in seconds
+    ticks: int  # physics ticks simulated
+    steps: int  # decisions made (calls to func)
     horseshoes: int
     horseshoes_total: int
     geese_stomped: int
@@ -94,6 +94,7 @@ class Game:
         self.renderer = None
         if render:
             from .render import Renderer
+
             self.renderer = Renderer(self.world, speed=speed)
 
     @property

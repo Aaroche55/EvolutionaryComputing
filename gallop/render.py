@@ -14,10 +14,21 @@ from .engine import World
 
 VW, VH, SCALE = 480, 272, 2
 COLORS = {
-    "sky": (127, 180, 214), "ground": (107, 74, 47), "grass": (104, 179, 70), "stone": (163, 159, 149),
-    "plank": (164, 114, 63), "water": (58, 127, 174), "hay": (224, 182, 76), "pony": (154, 98, 53),
-    "rider": (122, 31, 61), "goose": (244, 241, 234), "beak": (240, 138, 36), "shoe": (217, 221, 227),
-    "goal": (214, 38, 49), "ink": (251, 241, 220), "shadow": (35, 26, 43),
+    "sky": (127, 180, 214),
+    "ground": (107, 74, 47),
+    "grass": (104, 179, 70),
+    "stone": (163, 159, 149),
+    "plank": (164, 114, 63),
+    "water": (58, 127, 174),
+    "hay": (224, 182, 76),
+    "pony": (154, 98, 53),
+    "rider": (122, 31, 61),
+    "goose": (244, 241, 234),
+    "beak": (240, 138, 36),
+    "shoe": (217, 221, 227),
+    "goal": (214, 38, 49),
+    "ink": (251, 241, 220),
+    "shadow": (35, 26, 43),
 }
 TILE_COLORS = {GROUND: "ground", STONE: "stone", PLANK: "plank", WATER: "water", HAY: "hay"}
 
@@ -47,8 +58,11 @@ class Renderer:
 
     def finish(self, result) -> None:
         msg = "Cleared!" if result.cleared else ("Died: " + result.death_cause if result.died else "Out of time")
-        self.draw(None, f"{msg}   progress {result.progress:.3f}   time {result.time:.2f}s   "
-                        f"shoes {result.horseshoes}/{result.horseshoes_total}")
+        self.draw(
+            None,
+            f"{msg}   progress {result.progress:.3f}   time {result.time:.2f}s   "
+            f"shoes {result.horseshoes}/{result.horseshoes_total}",
+        )
         end = pygame.time.get_ticks() + 2500
         while pygame.time.get_ticks() < end:
             for e in pygame.event.get():
@@ -115,4 +129,3 @@ def keyboard_controller(_t: int) -> Action:
     if jump:
         return {-1: Action.LEFT_JUMP, 0: Action.JUMP, 1: Action.RIGHT_JUMP}[d]
     return {-1: Action.LEFT, 0: Action.NOOP, 1: Action.RIGHT}[d]
-

@@ -26,7 +26,7 @@ def test_func_receives_increasing_step_index():
     game = Game(lambda t: seen.append(t) or Action.RIGHT, max_time=1.0)
     game.run_full()
     assert seen == list(range(len(seen)))
-    assert len(seen) == game.max_steps == 5     # default: 5 decisions per second
+    assert len(seen) == game.max_steps == 5  # default: 5 decisions per second
 
 
 def test_func_may_return_plain_int():
@@ -36,7 +36,7 @@ def test_func_may_return_plain_int():
 def test_default_rate_is_five_actions_per_second():
     game = Game(lambda t: Action.NOOP)
     assert game.decision_dt == pytest.approx(0.2)
-    assert game.max_steps == 300                  # 60 s default
+    assert game.max_steps == 300  # 60 s default
 
 
 def test_short_genome_raises_genome_exhausted():
@@ -48,7 +48,7 @@ def test_short_genome_raises_genome_exhausted():
     assert exc.value.max_steps == game.max_steps
     assert isinstance(exc.value, GameError)
     assert isinstance(exc.value.__cause__, IndexError)
-    assert game.steps == 10                       # the 10 genes that existed were all played
+    assert game.steps == 10  # the 10 genes that existed were all played
 
 
 def test_genome_exhausted_from_run_one():
@@ -61,7 +61,7 @@ def test_genome_exhausted_from_run_one():
 def test_full_length_genome_never_exhausts():
     game = Game(lambda t: Action.NOOP)
     genome = [Action.NOOP] * game.max_steps
-    Game(lambda t: genome[t]).run_full()          # times out exactly at the end of the genome
+    Game(lambda t: genome[t]).run_full()  # times out exactly at the end of the genome
 
 
 def test_genome_exhausted_not_raised_if_game_ends_first(solution):
@@ -83,7 +83,7 @@ def test_run_one_returns_none_until_finished():
     assert len(results) == game.max_steps - 1
     assert r == game.score
     assert game.result().timed_out
-    assert game.run_one() == r        # calling again after the end is harmless
+    assert game.run_one() == r  # calling again after the end is harmless
 
 
 def test_run_full_matches_run_one_loop():
@@ -128,7 +128,7 @@ def test_recorded_solution_clears_level1(solution):
 
 def test_end_on_death_false_keeps_playing():
     level = flat_level()
-    level["terrain"] = [{"type": "ground", "x0": 0, "x1": 5, "top": 14}]   # a pit you always fall into
+    level["terrain"] = [{"type": "ground", "x0": 0, "x1": 5, "top": 14}]  # a pit you always fall into
     game = Game(lambda t: Action.RIGHT, level, end_on_death=False, max_time=10)
     game.run_full()
     r = game.result()
