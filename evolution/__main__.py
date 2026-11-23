@@ -16,6 +16,7 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
+from .fitness import FITNESS_FUNCTIONS
 from .ga import Checkpoint, GAConfig, GeneticAlgorithm
 from .genome import decode
 from .rundir import RunDir, genome_from_record
@@ -49,6 +50,7 @@ def train(args: argparse.Namespace) -> None:
             tournament_size=args.tournament_size or d.tournament_size,
             mutation_rate=args.mutation_rate,
             max_time=args.max_time or d.max_time,
+            fitness=args.fitness,
             seed=args.seed,
             workers=workers,
         )
@@ -115,6 +117,9 @@ def main(argv: list[str] | None = None) -> None:
     new.add_argument("--tournament-size", type=int)
     new.add_argument("--mutation-rate", type=float, help="per-bit flip probability (default 1/L)")
     new.add_argument("--max-time", type=float, help="seconds of game time per evaluation (default 200)")
+    new.add_argument(
+        "--fitness", choices=FITNESS_FUNCTIONS, default="sum", help="fitness function, see fitness.py (default sum)"
+    )
     new.add_argument("--seed", type=int, default=0)
     new.add_argument("--out", type=Path, help="run directory (default runs/seed<seed>)")
 

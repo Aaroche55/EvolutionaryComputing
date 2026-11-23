@@ -92,6 +92,21 @@ def test_fitness_terms():
     assert fitness(result(progress=0.5, time=50.0), max_time=200) == pytest.approx(0.75)
 
 
+def test_tiered_fitness():
+    def tiered(**kw):
+        return fitness(result(**kw), max_time=200, function="tiered")
+
+    assert tiered(progress=1.0, time=20.0, cleared=True) == pytest.approx(0.1)
+    assert tiered(progress=0.5, time=3.0) == pytest.approx(1.5)  # dying early earns nothing
+    assert tiered(progress=0.5, time=200.0) == pytest.approx(1.5)
+    assert tiered(progress=0.99, time=200.0) > tiered(progress=1.0, time=199.0, cleared=True)
+
+
+def test_unknown_fitness_function():
+    with pytest.raises(ValueError, match="unknown fitness"):
+        fitness(result(progress=0.5, time=1.0), function="nope")
+
+
 def test_fitness_time_term_capped():
     assert fitness(result(progress=0.5, time=500.0), max_time=200) == pytest.approx(1.5)
 
@@ -190,8 +205,21 @@ def test_config_defaults():
     assert c.genome_bits == 6000
     assert c.bit_mutation_rate == pytest.approx(1 / 6000)
     assert c.max_time == 200
+    assert c.fitness == "sum"
     with pytest.raises(ValueError, match="even"):
         GAConfig(population_size=401)
+    with pytest.raises(ValueError, match="fitness"):
+        GAConfig(fitness="nope")
+    with pytest.raises(ValueError, match="longer than the genome"):
+        GAConfig(n_genes=400, max_time=200.0)
+    GAConfig(n_genes=400, max_time=80.0)
+
+
+def test_ga_uses_configured_fitness():
+    cfg = replace(small_config(1, generations=1), fitness="tiered")
+    run = GeneticAlgorithm(cfg).run()
+    r = run.best.result
+    assert run.best.fitness == fitness(r, cfg.max_time, "tiered")
 
 
 def test_ga_runs_and_best_never_worsens():

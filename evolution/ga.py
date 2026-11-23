@@ -25,7 +25,9 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-from .fitness import DEFAULT_MAX_TIME, DEFAULT_TICKS_PER_ACTION, Evaluation, evaluate
+from gallop.constants import STEP
+
+from .fitness import DEFAULT_MAX_TIME, DEFAULT_TICKS_PER_ACTION, FITNESS_FUNCTIONS, Evaluation, evaluate
 from .genome import GENE_BITS, N_GENES, Genome, random_genome
 from .operators import bit_flip_mutation, negative_tournament_cull, single_point_crossover
 
@@ -44,6 +46,7 @@ class GAConfig:
     mutation_rate: float | None = None  # per bit; None means 1 / genome length
     max_time: float = DEFAULT_MAX_TIME
     ticks_per_action: int = DEFAULT_TICKS_PER_ACTION
+    fitness: str = "sum"  # see fitness.py
     seed: int = 0
     workers: int = 1  # processes used to evaluate genomes; 1 evaluates in this process
 
@@ -54,6 +57,10 @@ class GAConfig:
             raise ValueError("tournament_size must be between 1 and population_size + 1")
         if self.mutation_rate is not None and not 0 <= self.mutation_rate <= 1:
             raise ValueError("mutation_rate must be in [0, 1]")
+        if self.fitness not in FITNESS_FUNCTIONS:
+            raise ValueError(f"fitness must be one of {FITNESS_FUNCTIONS}")
+        if self.max_time > self.n_genes * self.ticks_per_action * STEP + 1e-9:
+            raise ValueError("max_time is longer than the genome can play (GenomeExhausted); lower it or add genes")
         if self.generations < 0 or self.n_genes < 1 or self.workers < 1:
             raise ValueError("generations must be >= 0, n_genes and workers >= 1")
 
@@ -126,7 +133,12 @@ class GeneticAlgorithm:
         self.rng = np.random.default_rng(config.seed)
         self.evaluations = 0
         self._map: Callable[[list[Genome]], list[Evaluation]] = self._map_serial
-        self._evaluate = partial(evaluate, max_time=config.max_time, ticks_per_action=config.ticks_per_action)
+        self._evaluate = partial(
+            evaluate,
+            max_time=config.max_time,
+            ticks_per_action=config.ticks_per_action,
+            fitness_function=config.fitness,
+        )
 
     # ---------- evaluation
 

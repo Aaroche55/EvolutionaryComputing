@@ -100,6 +100,10 @@ Fitness is minimised: `(1 - progress) + min(time, 200) / 200`. Defaults: populat
 pairs, single point crossover, bit-flip mutation at 1/6000, parents + children culled back to 400 by
 negative tournaments of size 3. See `journal.md` for the reasoning.
 
+`--fitness tiered` switches to a fitness where any clear beats any non-clear: clears score
+`time / max_time` (0–1), non-clears `2 - progress` (1–2), so dying early earns nothing. `max_time` must fit
+in the genome (genes / 5 seconds), e.g. `--genes 400 --max-time 80`.
+
 ```sh
 uv run python -m evolution train --generations 100 --seed 1         # new run in runs/seed1 (all CPU cores)
 uv run python -m evolution train --resume runs/seed1 --generations 200   # continue it (after Ctrl-C too)
