@@ -1,0 +1,119 @@
+# Ballinasloe Gallop — EA environment
+
+A headless, deterministic Python port of level 1 ("The Fair Green") of `og_game/ballinasloe-gallop.html`,
+built as the environment for an evolutionary algorithm.
+
+## Setup
+
+Requires [uv](https://docs.astral.sh/uv/). Python is pinned to 3.13 (`.python-version`) because pygame-ce
+has no wheels for 3.15 yet; the headless game itself has no dependencies.
+
+```sh
+uv sync --extra render     # pygame-ce for the viewer, pytest for tests
+uv run pytest              # run the tests
+```
+
+## Controller API
+
+```python
+from gallop import Game, Action, N_ACTIONS
+
+def controller(t: int) -> Action | int:   # t = decision step 0, 1, 2, ...
+    return genome[t]                       # any int in 0..N_ACTIONS-1
+
+game = Game(func=controller, level=1)
+score = game.run_full()                    # progress score in [0, 1]; 1.0 = level cleared
+
+# or one decision at a time: None until the game is over, then the score
+game = Game(func=controller, level=1)
+while (score := game.run_one()) is None:
+    pass
+
+game.result()   # Result(progress, cleared, died, death_cause, timed_out, time, ticks, steps,
+                #        horseshoes, horseshoes_total, geese_stomped)
+```
+
+| Action | value | |
+|---|---|---|
+| `NOOP` | 0 | |
+| `LEFT` | 1 | |
+| `RIGHT` | 2 | |
+| `JUMP` | 3 | jump held |
+| `LEFT_JUMP` | 4 | |
+| `RIGHT_JUMP` | 5 | |
+
+Jump behaves like the button in the original: a jump starts when jump goes from released to held, and
+holding it longer jumps higher. Holding jump for consecutive steps does **not** jump again on landing.
+
+`Game` options:
+
+- `ticks_per_action=24`: physics runs at 120 Hz; each decision is held for this many ticks (24 gives
+  5 decisions/s, i.e. one every 0.2 s). `game.decision_dt` is the length of one decision in seconds.
+- `max_time=60.0`: simulated seconds before the run times out. `game.max_steps` is the most decisions a
+  run can take (300 with the defaults), which is a natural genome length.
+- `end_on_death=True`: the run ends on the first death. With `False` the player respawns at the start
+  (no checkpoints) until time runs out.
+- `render=False`: `True` opens a pygame window and plays the run in real time (`speed=` to speed it up).
+- `level`: `1`, a path to a level JSON file, or a parsed dict.
+
+**Short genomes**: if `func` raises `IndexError` (e.g. `genome[t]` past the end of the genome), the game
+raises `gallop.GenomeExhausted` (a subclass of `gallop.GameError`) with `.step` and `.max_steps` set. A
+genome of length `game.max_steps` can never run out; a shorter one only fails if the run is still going
+when it ends.
+
+```python
+from gallop import GenomeExhausted
+try:
+    score = Game(func=lambda t: genome[t]).run_full()
+except GenomeExhausted as e:
+    ...  # e.step = first missing step
+```
+
+**Progress score** = the furthest the player has got from the spawn towards the goal line, as a fraction
+(0–1). It never goes down when the player walks back, and is exactly 1.0 when the level is cleared. Use the
+fields of `game.result()` (time, horseshoes, death cause…) to build a richer fitness.
+
+## Levels
+
+Levels are JSON files in `gallop/levels/`. Coordinates are tiles (16 px); row 0 is the top and row 16 the
+bottom. `terrain` entries are applied in order:
+
+- `ground {x0, x1, top}`: solid from row `top` to the bottom
+- `stone {x0, x1, y0, y1?}`: solid block
+- `plank {x0, x1, y}`: one-way platform (you can jump up through it)
+- `hay {x, y}`: one solid tile
+- `water {x0, x1, top}`: kills; only fills empty cells
+
+plus `horseshoes [{x0, x1, y}]`, `geese [{x, top, speed}]`, `spawn_x` and `goal {x}`.
+
+## Command line
+
+```sh
+uv run python -m gallop play                                     # play it yourself (arrows + space)
+uv run python -m gallop replay tests/data/level1_solution.json   # watch a recorded action list
+uv run python -m gallop bench                                    # headless speed
+```
+
+## Differences from the reference game
+
+- Level 1 only; checkpoints removed (a death restarts from the spawn).
+- No sound, particles, camera shake or title/menu screens; none of them change the outcome.
+- The reference game's only randomness (goose honk timers) is cosmetic, so it was dropped and runs are
+  fully deterministic.
+- A jump pressed during the 0.045 s stomp hit-stop is kept until the next tick instead of being dropped.
+- The viewer draws flat rectangles (hitboxes) rather than the original pixel art.
+
+## Layout
+
+```
+gallop/
+  actions.py     Action enum
+  constants.py   physics constants from the reference
+  level.py       JSON level loading -> tile grid
+  engine.py      World: deterministic 120 Hz simulation
+  game.py        Game / Result: the controller API
+  render.py      optional pygame viewer + keyboard controller
+  __main__.py    CLI
+  levels/level1.json
+tests/           level, physics and API tests; data/level1_solution.json clears level 1
+```
