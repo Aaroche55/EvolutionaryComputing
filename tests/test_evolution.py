@@ -8,6 +8,7 @@ import pytest
 
 from evolution import GENE_BITS, GENOME_BITS, GAConfig, GeneticAlgorithm, decode, encode, evaluate, fitness
 from evolution.__main__ import main as cli
+from evolution.fitness import GOOSE_POINTS
 from evolution.genome import random_genome
 from evolution.operators import bit_flip_mutation, negative_tournament_cull, single_point_crossover
 from evolution.rundir import RunDir, genome_from_record
@@ -18,7 +19,7 @@ def bits(s: str) -> np.ndarray:
     return np.array([int(c) for c in s], dtype=np.uint8)
 
 
-def result(progress=0.0, time=0.0, cleared=False) -> Result:
+def result(progress=0.0, time=0.0, cleared=False, horseshoes=0, geese_stomped=0) -> Result:
     return Result(
         progress=progress,
         cleared=cleared,
@@ -28,9 +29,9 @@ def result(progress=0.0, time=0.0, cleared=False) -> Result:
         time=time,
         ticks=0,
         steps=0,
-        horseshoes=0,
+        horseshoes=horseshoes,
         horseshoes_total=0,
-        geese_stomped=0,
+        geese_stomped=geese_stomped,
     )
 
 
@@ -100,6 +101,21 @@ def test_tiered_fitness():
     assert tiered(progress=0.5, time=3.0) == pytest.approx(1.5)  # dying early earns nothing
     assert tiered(progress=0.5, time=200.0) == pytest.approx(1.5)
     assert tiered(progress=0.99, time=200.0) > tiered(progress=1.0, time=199.0, cleared=True)
+
+
+def test_points_fitness():
+    def points(**kw):
+        return fitness(result(**kw), max_time=200, function="points")
+
+    assert points(progress=1.0, time=20.0, cleared=True) == 0.0
+    assert points(progress=1.0, time=20.0, cleared=True, horseshoes=10, geese_stomped=2) == -(10 + 2 * GOOSE_POINTS)
+    # time doesn't matter, only what was collected
+    assert points(progress=1.0, time=190.0, cleared=True, horseshoes=11) < points(
+        progress=1.0, time=20.0, cleared=True, horseshoes=10
+    )
+    # collecting never counts without a clear
+    assert points(progress=0.5, time=20.0, horseshoes=30, geese_stomped=4) == pytest.approx(1.5)
+    assert points(progress=0.99, time=200.0) > points(progress=1.0, time=200.0, cleared=True)
 
 
 def test_unknown_fitness_function():

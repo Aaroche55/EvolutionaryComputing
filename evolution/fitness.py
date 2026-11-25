@@ -1,6 +1,6 @@
 """Fitness of a genome: play it through the game and score the result. Lower is better (minimisation).
 
-Two fitness functions, chosen per run with GAConfig.fitness:
+Three fitness functions, chosen per run with GAConfig.fitness:
 
 "sum" (the original):
     fitness = (1 - progress) + min(time, max_time) / max_time
@@ -13,6 +13,13 @@ Two fitness functions, chosen per run with GAConfig.fitness:
     cleared:      fitness = min(time, max_time) / max_time      in [0, 1]
     not cleared:  fitness = 2 - progress                        in [1, 2]
   Any clear beats any non-clear; non-clears are ranked by distance only, so dying early earns nothing.
+
+"points":
+    cleared:      fitness = -(horseshoes + GOOSE_POINTS * stomps)      <= 0
+    not cleared:  fitness = 2 - progress                                in [1, 2]
+  Time is ignored: among clears, only horseshoes collected and geese stomped count. Points only count on
+  a clear, so any clear (even with nothing collected) beats any non-clear. The run must still finish
+  within max_time.
 """
 
 from __future__ import annotations
@@ -34,7 +41,9 @@ class Evaluation:
     result: Result
 
 
-FITNESS_FUNCTIONS = ("sum", "tiered")
+FITNESS_FUNCTIONS = ("sum", "tiered", "points")
+
+GOOSE_POINTS = 5  # points per goose stomped ("points" fitness); a horseshoe is 1. Level 1 has 38 shoes, 4 geese
 
 
 def fitness(result: Result, max_time: float = DEFAULT_MAX_TIME, function: str = "sum") -> float:
@@ -43,6 +52,10 @@ def fitness(result: Result, max_time: float = DEFAULT_MAX_TIME, function: str = 
         return (1.0 - result.progress) + time_term
     if function == "tiered":
         return time_term if result.cleared else 2.0 - result.progress
+    if function == "points":
+        if not result.cleared:
+            return 2.0 - result.progress
+        return -float(result.horseshoes + GOOSE_POINTS * result.geese_stomped)
     raise ValueError(f"unknown fitness function {function!r}; choose from {FITNESS_FUNCTIONS}")
 
 
